@@ -2,7 +2,7 @@
   "name": "La Esquinita Inventario",
   "short_name": "LaEsquinita",
   "description": "Gestión de inventario con escáner y Firebase",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "theme_color": "#1e293b",
   "background_color": "#ffffff",
