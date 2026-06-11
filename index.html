@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>La Esquinita - Inventario PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e293b">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .scan-input {
+            position: fixed;
+            top: -100px;
+            left: 0;
+            opacity: 0;
+            pointer-events: none;
+            width: 1px;
+            height: 1px;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            transition: all 0.2s ease;
+        }
+        @media (max-width: 768px) {
+            .table-responsive {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+        [contenteditable="true"]:focus {
+            outline: 2px solid #3b82f6;
+            background-color: #fef9c3;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+
+    <!-- Input oculto para escáner -->
+    <input type="text" id="scanInput" class="scan-input" autofocus>
+
+    <div class="container mx-auto px-4 py-6 max-w-7xl">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <h1 class="text-3xl font-bold text-gray-800">
+                <i class="fas fa-boxes text-blue-600"></i> La Esquinita
+            </h1>
+            <div class="flex gap-3">
+                <button id="addCategoryBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2">
+                    <i class="fas fa-plus"></i> Categoría
+                </button>
+                <button id="exportDataBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2">
+                    <i class="fas fa-download"></i> Exportar
+                </button>
+                <button id="syncStatus" class="bg-blue-100 text-blue-800 px-3 py-2 rounded-lg text-sm font-mono">
+                    <i class="fas fa-cloud-upload-alt"></i> Sincronizado
+                </button>
+            </div>
+        </div>
+
+        <!-- Buscador y filtros -->
+        <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+            <div class="flex flex-col md:flex-row gap-3">
+                <div class="flex-1 relative">
+                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    <input type="text" id="searchInput" placeholder="Buscar por nombre o código de barras..." 
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <button id="clearSearchBtn" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg">
+                    <i class="fas fa-times"></i> Limpiar
+                </button>
+            </div>
+        </div>
+
+        <!-- Panel de categorías (tabs) -->
+        <div class="mb-6 overflow-x-auto">
+            <div id="categoriesTabs" class="flex gap-2 border-b pb-2">
+                <!-- Dinámico con JS -->
+            </div>
+        </div>
+
+        <!-- Vista de productos (tabla en desktop, tarjetas en mobile) -->
+        <div id="productsContainer" class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="p-8 text-center text-gray-500">
+                <i class="fas fa-spinner fa-spin text-2xl"></i> Cargando inventario...
+            </div>
+        </div>
+
+        <!-- Modal para edición/creación rápida -->
+        <div id="productModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-xl max-w-lg w-full max-h-screen overflow-y-auto p-6 shadow-2xl">
+                <h2 id="modalTitle" class="text-2xl font-bold mb-4">Nuevo Producto</h2>
+                <form id="productForm">
+                    <input type="hidden" id="productId">
+                    <div class="grid grid-cols-1 gap-4">
+                        <div><label class="block font-medium">Código de barras *</label><input type="text" id="barcode" required class="w-full border rounded-lg px-3 py-2"></div>
+                        <div><label class="block font-medium">Nombre *</label><input type="text" id="name" required class="w-full border rounded-lg px-3 py-2"></div>
+                        <div><label class="block font-medium">Categoría</label><select id="categorySelect" class="w-full border rounded-lg px-3 py-2"></select></div>
+                        <div><label class="block font-medium">Fecha ingreso</label><input type="date" id="entryDate" class="w-full border rounded-lg px-3 py-2"></div>
+                        <div><label class="block font-medium">Cantidad</label><input type="number" id="quantity" step="1" value="0" class="w-full border rounded-lg px-3 py-2"></div>
+                        <div><label class="block font-medium">Precio costo ($)</label><input type="number" id="costPrice" step="0.01" value="0" class="w-full border rounded-lg px-3 py-2"></div>
+                        <div><label class="block font-medium">% Ganancia</label><input type="number" id="profitPercent" step="0.1" value="30" class="w-full border rounded-lg px-3 py-2"></div>
+                        <div><label class="block font-medium">Precio total ($) (automático)</label><input type="text" id="totalPrice" readonly class="w-full border rounded-lg bg-gray-100 px-3 py-2"></div>
+                    </div>
+                    <div class="flex justify-end gap-3 mt-6">
+                        <button type="button" id="closeModal" class="px-4 py-2 bg-gray-300 rounded-lg">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Toast de notificación -->
+        <div id="toast" class="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg hidden transition-all z-50"></div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
