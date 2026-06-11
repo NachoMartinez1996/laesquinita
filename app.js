@@ -107,9 +107,9 @@ async function initialLoad() {
             renderProducts();
             showToast("Inventario actualizado", false);
             syncStatusSpan.innerHTML = '<i class="fas fa-check-circle"></i> Actualizado';
-            setTimeout(() => {
-                syncStatusSpan.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Sincronizado';
-            }, 2000);
+setTimeout(() => {
+    syncStatusSpan.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Sincronizado';
+}, 2000);
         });
     } catch (error) {
         console.error('Error al cargar datos:', error);
