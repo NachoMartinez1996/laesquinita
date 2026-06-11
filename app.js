@@ -31,6 +31,7 @@ const categoriesTabs = document.getElementById('categoriesTabs');
 const productsContainer = document.getElementById('productsContainer');
 const addCategoryBtn = document.getElementById('addCategoryBtn');
 const exportDataBtn = document.getElementById('exportDataBtn');
+const resetDBBtn = document.getElementById('resetDBBtn');
 const syncStatusSpan = document.getElementById('syncStatus');
 const productModal = document.getElementById('productModal');
 const modalTitle = document.getElementById('modalTitle');
@@ -64,7 +65,6 @@ document.getElementById('profitPercent')?.addEventListener('input', updateTotalP
 let dataLoaded = false;
 
 async function initialLoad() {
-    // Timeout de 10 segundos
     const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000));
     try {
         const [catsSnap, prodsSnap] = await Promise.race([
@@ -74,7 +74,6 @@ async function initialLoad() {
         const catsData = catsSnap.val();
         categories = catsData ? Object.entries(catsData).map(([id, cat]) => ({ id, ...cat })) : [];
         if (categories.length === 0) {
-            // Crear categorías por defecto
             const defaultCats = ["Bebidas", "Vinos", "Limpieza e Higiene", "Galletitas y snacks", "Comestibles", "Helados", "Cigarrillos", "Descartables", "Otros"];
             for (const nombre of defaultCats) {
                 const newRef = push(categoriesRef);
@@ -89,7 +88,7 @@ async function initialLoad() {
         renderProducts();
         showToast("Inventario cargado", false);
         syncStatusSpan.innerHTML = '<i class="fas fa-check-circle"></i> Actualizado';
-        setTimeout(() => {s
+        setTimeout(() => {
             syncStatusSpan.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Sincronizado';
         }, 2000);
 
@@ -107,9 +106,9 @@ async function initialLoad() {
             renderProducts();
             showToast("Inventario actualizado", false);
             syncStatusSpan.innerHTML = '<i class="fas fa-check-circle"></i> Actualizado';
-setTimeout(() => {
-    syncStatusSpan.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Sincronizado';
-}, 2000);
+            setTimeout(() => {
+                syncStatusSpan.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Sincronizado';
+            }, 2000);
         });
     } catch (error) {
         console.error('Error al cargar datos:', error);
@@ -127,7 +126,7 @@ setTimeout(() => {
     }
 }
 
-// Renderizado de pestañas (sin cambios sustanciales)
+// Renderizado de pestañas
 function renderCategoriesTabs() {
     if (!categories.length) {
         categoriesTabs.innerHTML = '';
@@ -152,7 +151,7 @@ function renderCategoriesTabs() {
         `).join('')}
         <button id="quickAddCat" class="ml-2 text-blue-600 hover:text-blue-800"><i class="fas fa-plus-circle"></i> Nueva</button>
     `;
-    // Event listeners de categorías (idénticos a los anteriores, omitidos por brevedad pero incluidos en el archivo final)
+
     document.querySelectorAll('.category-tab').forEach(btn => {
         btn.addEventListener('click', (e) => {
             currentCategoryId = btn.dataset.cat;
@@ -197,7 +196,7 @@ function renderCategoriesTabs() {
     });
 }
 
-// Renderizar productos (incluye botón de carga inicial)
+// Renderizar productos
 function renderProducts() {
     let filtered = products;
     if (currentCategoryId !== "todos") {
@@ -210,7 +209,6 @@ function renderProducts() {
         );
     }
 
-    // Botón de carga inicial si está vacío y hay categorías
     if (filtered.length === 0 && categories.length > 0 && products.length === 0 && dataLoaded) {
         productsContainer.innerHTML = `
             <div class="p-8 text-center text-gray-500">
@@ -294,7 +292,7 @@ function renderProducts() {
         `;
     }
 
-    // Eventos inline (idénticos a la versión anterior)
+    // Eventos inline
     document.querySelectorAll('.editable-field').forEach(field => {
         field.addEventListener('blur', async (e) => {
             const productId = field.dataset.id;
@@ -333,7 +331,7 @@ function renderProducts() {
     });
 }
 
-// Modal producto (sin cambios)
+// Modal producto
 function openProductModal(id = null) {
     const form = document.getElementById('productForm');
     form.reset();
@@ -393,7 +391,7 @@ window.addEventListener('click', (e) => {
     if (e.target === productModal) productModal.classList.add('hidden');
 });
 
-// Escáner (sin cambios)
+// Escáner
 let scanBuffer = "";
 let scanTimeout;
 scanInput.addEventListener('keydown', (e) => {
@@ -458,9 +456,36 @@ addCategoryBtn.addEventListener('click', () => {
     }
 });
 
+// Botón de reset
+resetDBBtn.addEventListener('click', async () => {
+    if (!confirm("¿Estás seguro de borrar TODOS los productos y categorías? Esta acción no se puede deshacer.")) return;
+    try {
+        showToast("⏳ Borrando base de datos...");
+        // Eliminar todos los productos uno por uno (Firebase RTDB no permite remove en nodo raíz con reglas cliente fácilmente, así que iteramos)
+        const prodsSnap = await get(productsRef);
+        if (prodsSnap.exists()) {
+            const updates = {};
+            Object.keys(prodsSnap.val()).forEach(key => { updates[`productos/${key}`] = null; });
+            await update(ref(db), updates);
+        }
+        const catsSnap = await get(categoriesRef);
+        if (catsSnap.exists()) {
+            const updates = {};
+            Object.keys(catsSnap.val()).forEach(key => { updates[`categorias/${key}`] = null; });
+            await update(ref(db), updates);
+        }
+        showToast("✅ Base de datos vaciada. Recargando...");
+        // Recargar la página para empezar de cero
+        setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+        showToast("❌ Error al resetear", true);
+        console.error(error);
+    }
+});
+
+// Carga inicial masiva (con semilla completa)
 async function cargarInventarioInicial() {
     const productosSemilla = [
-        // Bebidas
         ["Santa fé Pilsen x 1L", "Bebidas", 11, 31900],
         ["Schneider x 1L", "Bebidas", 10, 27500],
         ["Stella Artois x 1L", "Bebidas", 3, 12300],
@@ -471,11 +496,10 @@ async function cargarInventarioInicial() {
         ["Latita Stella", "Bebidas", 4, 8400],
         ["Latita Heineken", "Bebidas", 2, 4800],
         ["Latones Schneider", "Bebidas", 6, 11500],
-        // Vinos
         ["Cosecha Tardía", "Vinos", 3, 9000],
         ["Chacabuco", "Vinos", 3, 14400],
         ["Dilema", "Vinos", 7, 23800],
-        ["Otro loco mas", "Vinos", 3, null, 3500],   // precio unitario
+        ["Otro loco mas", "Vinos", 3, null, 3500],
         ["Norton clásico", "Vinos", 2, 6000],
         ["Alma Mora", "Vinos", 6, 23800],
         ["Canciller blanco", "Vinos", 3, 5300],
@@ -486,7 +510,6 @@ async function cargarInventarioInicial() {
         ["Frize", "Vinos", 5, 12500],
         ["Pronto", "Vinos", 4, 13200],
         ["Gancia botella", "Vinos", 4, 27200],
-        // Bebidas (continuación)
         ["Agua mineral x 2L", "Bebidas", 4, 4000],
         ["Levite x 1.5L", "Bebidas", 20, 34000],
         ["Placer x 1.5L", "Bebidas", 20, 20000],
@@ -516,7 +539,6 @@ async function cargarInventarioInicial() {
         ["Powerade y Gatorade", "Bebidas", 15, 24000],
         ["Petaca café al coñac", "Bebidas", 2, 2000],
         ["Licores", "Bebidas", 2, 7000],
-        // Limpieza e Higiene
         ["Toallitas y Protectores", "Limpieza e Higiene", 23, 18500],
         ["Papel Higiénico Campanita", "Limpieza e Higiene", 2, 3000],
         ["Algodón", "Limpieza e Higiene", 2, 1600],
@@ -535,7 +557,6 @@ async function cargarInventarioInicial() {
         ["Camellito", "Limpieza e Higiene", 2, 3800],
         ["Jabón en polvo", "Limpieza e Higiene", 12, 12000],
         ["Pilas, encendedor, maquinitas", "Limpieza e Higiene", 1, 20000],
-        // Galletitas y snacks
         ["Papas Class x85g", "Galletitas y snacks", 8, 7600],
         ["Galletitas Pepas La Nova", "Galletitas y snacks", 3, 2100],
         ["Galletitas Don Satur", "Galletitas y snacks", 5, 5300],
@@ -545,7 +566,6 @@ async function cargarInventarioInicial() {
         ["Chocolatada x 1L", "Galletitas y snacks", 4, 10400],
         ["Sachet leche entera", "Galletitas y snacks", 7, 9800],
         ["Caramelos surtidos", "Galletitas y snacks", 1, 20000],
-        // Comestibles
         ["Mayonesa Natura x250", "Comestibles", 3, 3900],
         ["Ketchup Natura x250", "Comestibles", 4, 5200],
         ["Mayonesa Natura x125", "Comestibles", 16, 9600],
@@ -579,7 +599,6 @@ async function cargarInventarioInicial() {
         ["Fideos Spaghetti Terrabusi", "Comestibles", 8, 8000],
         ["Arroz x500", "Comestibles", 8, 7200],
         ["Bidón de agua x6L", "Comestibles", 4, 10300],
-        // Helados
         ["Palito bombón + caja", "Helados", 11, 28700],
         ["Palito Crema", "Helados", 13, 8000],
         ["Copas Suspiro", "Helados", 12, 20760],
@@ -590,7 +609,6 @@ async function cargarInventarioInicial() {
         ["Caja bombón escocés", "Helados", 1, 27000],
         ["Caja alfajor helado", "Helados", 1, 27000],
         ["Bolsas palito de agua", "Helados", 2, 23000],
-        // Cigarrillos
         ["Philips 10 Convertible", "Cigarrillos", 3, 7200],
         ["Malboro 10 Común", "Cigarrillos", 6, 15000],
         ["Lucky 20 box Común", "Cigarrillos", 1, 4000],
@@ -602,12 +620,10 @@ async function cargarInventarioInicial() {
         ["Chesterfield 10 Común", "Cigarrillos", 5, 9000],
         ["Paris Lucky 20 box", "Cigarrillos", 1, 5000],
         ["Papelillo OCB negra", "Cigarrillos", 10, 4000],
-        // Descartables
         ["Descartables (lote)", "Descartables", 1, 50000],
         ["Medallones", "Descartables", 19, 19000],
         ["Hamburguesas (un.)", "Descartables", 14, 3000],
         ["Hielo (bolsas)", "Descartables", 15, 18000],
-        // Ticket nuevos (usa precio unitario)
         ["DOVER BOX", "Cigarrillos", 4, null, 1300],
         ["MARLBORO CRAFTED", "Cigarrillos", 4, null, 3300],
         ["MARLBORO CRAFTED (2do)", "Cigarrillos", 4, null, 3300],
