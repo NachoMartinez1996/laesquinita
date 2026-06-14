@@ -73,6 +73,29 @@
             </div>
         </div>
 
+        <!-- Panel de Turno -->
+        <div id="turnoPanel" class="bg-white rounded-xl shadow-md p-4 mb-6 flex flex-col md:flex-row items-center gap-4">
+            <div class="flex items-center gap-3">
+                <button id="iniciarTurnoBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium">
+                    <i class="fas fa-play"></i> Iniciar Turno
+                </button>
+                <button id="finalizarTurnoBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium hidden">
+                    <i class="fas fa-stop"></i> Finalizar Turno
+                </button>
+            </div>
+            <div id="turnoInfo" class="hidden flex-1 flex flex-wrap gap-2 text-sm">
+                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-mono">
+                    <i class="far fa-clock"></i> <span id="turnoInicio"></span>
+                </span>
+                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full font-mono">
+                    <i class="fas fa-shopping-cart"></i> Ventas: <span id="turnoVentasCount">0</span>
+                </span>
+                <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-mono">
+                    <i class="fas fa-dollar-sign"></i> Total: $<span id="turnoTotalVentas">0.00</span>
+                </span>
+            </div>
+        </div>
+
         <!-- Buscador y filtros -->
         <div class="bg-white rounded-xl shadow-md p-4 mb-6">
             <div class="flex flex-col md:flex-row gap-3">
